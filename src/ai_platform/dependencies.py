@@ -10,8 +10,6 @@ from ai_platform.config import Settings, settings
 _engine = create_async_engine(
     settings.database_url,
     echo=settings.app_debug,
-    pool_size=10,
-    max_overflow=20,
 )
 _session_factory = async_sessionmaker(_engine, expire_on_commit=False)
 
