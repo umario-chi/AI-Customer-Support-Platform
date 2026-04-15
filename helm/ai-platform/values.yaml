@@ -1,6 +1,6 @@
 image:
   repository: ghcr.io/umario-chi/ai-customer-support-platform/ai-platform
-  tag: sha-b5f2976
+  tag: sha-98cf298
   pullPolicy: Always
 
 replicaCount: 1
