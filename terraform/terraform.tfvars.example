@@ -1,0 +1,15 @@
+aws_region              = "us-east-1"
+project_name            = "ai-platform"
+environment             = "production"
+vpc_cidr                = "10.0.0.0/16"
+eks_cluster_version     = "1.29"
+eks_node_instance_types = ["t3.medium"]
+eks_node_desired_size   = 2
+eks_node_min_size       = 2
+eks_node_max_size       = 5
+app_domain              = "ai.example.com"
+ghcr_username           = "your-github-username"
+ghcr_token              = "ghp_xxxxxxxxxxxx"
+llm_api_key             = "gsk_xxxxxxxxxxxx"
+llm_base_url            = "https://api.groq.com/openai/v1"
+llm_model               = "llama-3.3-70b-versatile"
