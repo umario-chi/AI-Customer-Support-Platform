@@ -1,20 +1,19 @@
 name: CD Pipeline
 
 on:
-  push:
+  workflow_run:
+    workflows: ["CI Pipeline"]
+    types: [completed]
     branches: [main]
   workflow_dispatch:
 
 jobs:
   deploy:
-    name: Update Helm values
+    name: Deploy to EKS
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     steps:
       - uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Compute image tag
         id: tag
@@ -22,14 +21,29 @@ jobs:
           SHORT_SHA=$(git rev-parse --short HEAD)
           echo "TAG=sha-${SHORT_SHA}" >> $GITHUB_OUTPUT
 
-      - name: Update image tag in values.yaml
-        run: |
-          sed -i "s/  tag: .*/  tag: ${{ steps.tag.outputs.TAG }}/" helm/ai-platform/values.yaml
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: eu-north-1
 
-      - name: Commit and push
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v4
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+
+      - name: Update kubeconfig
+        run: aws eks update-kubeconfig --name ai-platform-cluster --region eu-north-1
+
+      - name: Deploy with Helm
         run: |
-          git config user.email "ci-bot@github.com"
-          git config user.name "CI Bot"
-          git add helm/ai-platform/values.yaml
-          git diff --cached --quiet || git commit -m "ci: deploy image ${{ steps.tag.outputs.TAG }} [skip ci]"
-          git push
+          helm upgrade --install ai-platform ./helm/ai-platform \
+            -n ai-platform \
+            -f terraform/helm/values-production.yaml \
+            --set image.tag=${{ steps.tag.outputs.TAG }} \
+            --wait --timeout 5m
+
+      - name: Verify deployment
+        run: kubectl rollout status deployment/ai-platform -n ai-platform --timeout=120s
